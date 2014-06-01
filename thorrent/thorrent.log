@@ -1,0 +1,6 @@
+DEBUG:root:This message should go to the log file
+INFO:root:So should this
+WARNING:root:And this, too
+2014-05-31 21:47:29,486 Html content is valid for [kinozal.tv]id1184343.torrent
+2014-05-31 21:49:00,896 Html content is valid for [kinozal.tv]id1184343.torrent
+2014-05-31 21:49:05,786 Html content is valid for [kinozal.tv]id1184343.torrent
