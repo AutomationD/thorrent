@@ -5,12 +5,16 @@ import urllib.request
 import shutil
 #import sys
 import ctypes
+import codecs
+import sys
 
 INPUT_DIR = 'f:/testpy/downloads'
 OUTPUT_DIR = 'f:/testpy/movies'
 TORRENT_DIR = 'f:/testpy/torrents'
 MOVE_ALGORITHM = 'link'
 
+UTF8Writer = codecs.getwriter('utf8')
+sys.stdout = UTF8Writer(sys.stdout)
 
 def get_move_algorithms():
     return {'move': move_file(),

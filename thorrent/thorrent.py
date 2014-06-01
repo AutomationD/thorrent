@@ -1,30 +1,1 @@
-__author__ = 'dmitry'
-import os
-import bencode
-from pprint import pprint
-
-TEST_TORRENT_FILE = "[kinozal.tv]id1184343.torrent"
-
-INPUT_DIR = '/Userqs/dmitry/dev/thorrent/thorrent/test/samples/src'
-OUTPUT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/out'
-TORRENT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/torrents'
-torrent_file_name = TEST_TORRENT_FILE
-
-
-def get_torrent_data(torrent_file_name):
-    torrent_file_path = os.path.join(TORRENT_DIR, torrent_file_name)
-
-    if not os.path.exists(torrent_file_path):
-        print('Skipped, .torrent is not found: "%s' % torrent_file_path)
-        return None
-    else:
-        try:
-            torrent_data = bencode.bdecode(open(torrent_file_path, 'rb').read())
-            return torrent_data
-        except:
-            print("Error, can't extract tracker url from .torrent file %s" % torrent_file_path)
-            return None
-
-torrent_data = get_torrent_data(torrent_file_name)
-
-print(torrent_data['comment'])
+# -*- coding: utf-8 -*-from __future__ import unicode_literals__author__ = 'dmitry'import osimport bencode#import urllibimport urllib2import urllibfrom lxml import etreefrom pyquery import PyQueryfrom bs4 import BeautifulSoupimport stringfrom pprint import pprintTEST_TORRENT_FILE = "[kinozal.tv]id1184343.torrent"INPUT_DIR = '/Userqs/dmitry/dev/thorrent/thorrent/test/samples/src'OUTPUT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/out'TORRENT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/torrents'torrent_file_name = TEST_TORRENT_FILEdef get_torrent_file(torrent_file_name):    torrent_file_path = os.path.join(TORRENT_DIR, torrent_file_name)    if not os.path.exists(torrent_file_path):        print('Skipped, .torrent is not found: "%s' % torrent_file_path)        return None    else:        try:            torrent_data = bencode.bdecode(open(torrent_file_path, 'rb').read())            return torrent_data        except:            print("Error, can't extract tracker url from .torrent file %s" % torrent_file_path)            return Nonedef get_html(torrent_data):    tracker_url = torrent_data['comment']    #tracker_url = 'http://kinozal.tv/details.php?id=11843431111'    print ("URL: '%s'" % tracker_url)    try:        response = urllib.urlopen(tracker_url)        html_page = response.read()    except:        print("Error, Can't load tracker page '%s'" % tracker_url)        return None    html_page = html_page.decode('cp1251')    return html_pagedef content_is_valid(soup):    return soup.body.find('a', attrs={'class': 'r0'})html = get_html(get_torrent_file(torrent_file_name))#torrent_file_data = get_torrent_file(torrent_file_name)#pq = PyQuery(html)#d = pq("<html></html>")#print d.text()soup = BeautifulSoup(html)if not content_is_valid(soup):    print "Content is not a valid page"else:    print "Content is valid"    ## kinozal specific    desc = soup.h2.find_all('b')    #print desc    for d in desc:        param_name = d.text.strip()        param_value = d.next_sibling.strip()        # print d.text + " " + d.next_sibling        # print        # print ("data:")        # print (type(d.text))        # print ("string:")        # print (type("Название"))        if "Название" in param_name:            title = param_value        if "Оригинальное название" in param_name:            original_title = param_value        if "Год выпуска" in param_name:            year = param_valueprint title + " " + original_title + " " +year        #print new    # pprint(desc.contents)    #    # for item in desc:    #     print item    #     if u"Режиссер" in item.text():    #         print item    #         print "yeah"    # description_lines = str(desc).split('\n')    # for item in description_lines:    #     print item    #print description_lines[0]    # #print desc[0].contents    # for item in desc[0].contents:    #     print item    #     if 'cat_img_r' in item:    #         print "yes" + item    #description_lines = str(desc).split('\n')    # descriptions = []    # for description_line in description_lines:    #     print(description_line)    #     s_description_line = BeautifulSoup(description_line)    #     descriptions.insert(0,s_description_line.h2.b.nextSibling)    #torrent_file = get_torrent_file(torrent_file_name)    #torrent_data = get_torrent_data(torrent_file)    #print(torrent_data)# s = '<h2><img src="/pic/cat/11.gif" class="cat_img_r" onclick="cat(11);" alt="" /><b>Название:</b> Лекарь: Ученик Авиценны<br /></h2>'# soup2 = BeautifulSoup(s)## print(soup2.h2.b.nextSibling)
