@@ -75,7 +75,7 @@ def prepare_file_name(file_name):
 class FileInfo:
     pass
 
-
+#TODO: Test
 def parse_tracker_page(html_page):
     try:
         page_title = re.search(r'<title>(.+?) :: .+?</title>', html_page, re.UNICODE).groups()[0]
