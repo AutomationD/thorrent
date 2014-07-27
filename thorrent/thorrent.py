@@ -55,10 +55,6 @@ TORRENT_FILE_NAME = "[kinozal.tv]id984957.torrent"
 #TEST_TORRENT_FILE = "[kinozal.tv]id1008684.torrent" # Single File
 
 
-INPUT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/src'
-OUTPUT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/out'
-TORRENT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/torrents'
-
 
 #torrent_file_name = TEST_TORRENT_FILE
 
@@ -66,7 +62,7 @@ TORRENT_DIR = '/Users/dmitry/dev/thorrent/thorrent/test/samples/torrents'
 
 OPT_MODE = 'directory'
 logging.debug('Default mode: ' + OPT_MODE)
-OPT_PATH = INPUT_DIR
+OPT_PATH = config.INPUT_DIR
 logging.debug('Default path: ' + OPT_PATH)
 
 
@@ -88,7 +84,7 @@ class Thorrent(object):
 
     @staticmethod
     def __get_torrent_file_data(torrent_file_name):
-        torrent_file_path = os.path.join(TORRENT_DIR, torrent_file_name)
+        torrent_file_path = os.path.join(config.TORRENT_DIR, torrent_file_name)
 
         if not os.path.exists(torrent_file_path):
             logging.error('Skipped, .torrent is not found: "%s' % torrent_file_path)
@@ -135,7 +131,7 @@ class Thorrent(object):
                             10: "Movies",
                             9: "Movies",
                             47: "Movies",
-                            18: "Movies",
+
                             37: "Movies",
                             12: "Movies",
                             7: "Movies",
@@ -149,6 +145,7 @@ class Thorrent(object):
                             50: "TV-Shows",
                             45: "TV-Shows",
                             46: "TV-Shows",
+                            18: "TV-Shows",
 
 
                             48: "Music-Videos",
@@ -158,7 +155,8 @@ class Thorrent(object):
                             32: "Soft",
                             40: "Soft",
 
-                            3: "Music"
+                            3: "Music",
+                            2: "Audio-Books"
                         }
                     }
                 }
@@ -167,25 +165,47 @@ class Thorrent(object):
                 cat_id = re.sub(r'[\D]', '', str(cat['onclick']))
 
                 # logging.debug(pprint.pformat(cat, indent=1, width=80, depth=None))
-                self.category = categories['kinozal_tv']['categories'][int(cat_id)]
-                logging.debug("Category: " + categories['kinozal_tv']['categories'][int(cat_id)])
+                try:
+                    cat = categories['kinozal_tv']['categories'][int(cat_id)]
+                except:
+                    logging.error("Can't find category with id " + cat_id)
+                finally:
+                    self.category = cat
+                    logging.debug("Category: " + categories['kinozal_tv']['categories'][int(cat_id)])
+
+
 
                 ### :Get Category ###
+
+
+                ### Get Video Format ###
+                tech_params_div = "".join(soup.find(id="tabs").findAll(text=True)).split("\n")
+                # tp_p1 = tech_params_div.find("Качество: ")
+                # self.format = tech_params_div[tp_p1]
+                # print (self.format)
+                # print (tech_params_div)
+                for tech_param in tech_params_div:
+                    param = "Качество: "
+                    tp_p1 = tech_param.find(param)
+                    if tp_p1 > -1:
+                         self.format = tech_param[tp_p1+len(param):len(tech_param)]
+
+                ### :Get Video Format
 
                 html_title = soup.title.string
                 logging.debug("HTML title: " + html_title)
                 ### Check if series: ###
-                if ("серия" in html_title) or ("серии" in html_title): # Series Torrent
+                if ("серия" in html_title) or ("серии" in html_title) or ("выпуски" in html_title) or ("сезон:" in html_title) or ("сезоны:" in html_title): # Series Torrent
                     self.series = True
                     logging.debug("Detected Series")
 
-                    if "сезон" in html_title:  # If season is present in title
-                        se_p1 = html_title.find("сезон")
+                    if "сезон: " in html_title:  # If season is present in title ###? сезоны
+                        se_p1 = html_title.find("сезон: ")
                         se_p2 = html_title[0:se_p1-1].rfind(" (")
                         se_s = html_title[se_p2+2:se_p1-1]  # Temp Season string (could be 1, could be 1-1, etc)
                         logging.debug("Temp Season string: " + se_s)
                         se_s_min_p = se_s.find("-")  # get dash position
-                        logging.debug("Dash pos: " + str(se_s_min_p))
+                        # logging.debug("Dash pos: " + str(se_s_min_p))
                         if se_s_min_p < 0:  # If not multiple seasons
                             self.series_season_min = int(se_s)
                             self.series_season_max = int(se_s)
@@ -199,10 +219,15 @@ class Thorrent(object):
 
                         logging.debug("First Season: " + str(self.series_season_min))
                         logging.debug("Last Season: " + str(self.series_season_max))
+                    else:  # No information about season found
+                        self.series_season_min = 1
+                        self.series_season_max = 1
+
+
                     ### :Check if series ###
 
                 desc = soup.h2.find_all('b')
-                #print desc
+                #print (desc)
 
                 for d in desc:
                     param_name = d.text.strip()
@@ -239,9 +264,9 @@ class Thorrent(object):
 
 
 
-    @staticmethod
-    def torrent_data_type_is_directory(self, torrent_file_data):
-        if torrent_file_data.get('info').get('files'):
+
+    def torrent_data_type_is_directory(self):
+        if self.torrent_file_data.get('info').get('files'):
             #logging.debug(torrent_file_data['info']['files'])
             return True
         else:
@@ -273,7 +298,7 @@ class Thorrent(object):
 
 
         # safe_file_name = re.sub(r'\s*[\[\]\s\\/:"\*?"<>\|,]\s*', '.', safe_file_name, 0, re.UNICODE)
-        safe_file_name = re.sub(r'[^\.\'a-zA-ZА-Яа-яЁёё0-9\s_-]', '', safe_file_name, 0, re.UNICODE)
+        safe_file_name = re.sub(r'[^\(\)\.\'a-zA-ZА-Яа-яЁёё0-9\s_-]', '', safe_file_name, 0, re.UNICODE)
 
         # Remove duplicate dots
         safe_file_name = re.sub(r'[\.]+', '.', safe_file_name, 0, re.UNICODE)
@@ -288,12 +313,14 @@ class Thorrent(object):
         safe_file_name = safe_file_name.strip()
 
         # Replace all spaces with dots
-        safe_file_name = re.sub(r'\s', '.', safe_file_name, 0, re.UNICODE)
+        # safe_file_name = re.sub(r'\s', '.', safe_file_name, 0, re.UNICODE)
+        if torrent_file_name != safe_file_name:
+            logging.debug("Safety filters applied: " + torrent_file_name + " -> " + safe_file_name)
+        else:
+            logging.debug("No safety filters applied: " + safe_file_name)
         return safe_file_name
 
     def get_dst_file_name(self):
-
-
         ## Get new file name
         if self.series:
             if self.series_season_min == self.series_season_max:  # If Just one season
@@ -303,51 +330,59 @@ class Thorrent(object):
         else:
             season = None
 
-
         if self.localized_title:
             if season:
-                dst_file_name = self.title+"-"+self.localized_title+"." + season + "."+self.year
+                # dst_file_name = self.title+"."+self.localized_title+"." + season + "."+self.year
+                # dst_file_name = self.localized_title + "-" + self.title + "." +self.year
+                dst_file_name = self.title + " " + "(" + self.year + ")"
             else:
-                dst_file_name = self.title+"-"+self.localized_title+"."+self.year
+                # dst_file_name = self.localized_title + "-" + self.title + "." +self.year
+                # dst_file_name = self.title+"." + season + "."+self.year
+                dst_file_name = self.title + " " + "(" + self.year + ")"
         else:
             if season:
-                dst_file_name = self.title+"." + season + "." + self.year
+                # dst_file_name = self.title+"."+self.localized_title+"." + season + "."+self.year
+                dst_file_name = self.title + " " + "(" + self.year + ")"
+                # dst_file_name = self.title+"." + season + "." + self.year
             else:
-                dst_file_name = self.title+"."+self.year
+                dst_file_name = self.title + " " + "(" + self.year + ")"
+
+        if self.format:
+            dst_file_name += " - " + self.format
 
 
 
+        ## If are processing source as a file target should also have an extension, otherwise not
 
-
-
-        ## If are processing source as a file target should also have an extension, otherwise notx`
-        if not os.path.isdir(self.src_file_name):
+        if not self.torrent_data_type_is_directory:
             dst_file_name += os.path.splitext(self.src_file_name)[1]
-        return self.get_safe_file_name(self, dst_file_name)
+        #return self.get_safe_file_name(self, dst_file_name)
+        return dst_file_name
 
     def make_links(self):
-        src_directory = INPUT_DIR
-        # if self.series:
-        #     if self.series_season_min == self.series_season_max:
-        #         dst_directory = os.path.join(OUTPUT_DIR, self.category)
-        # else:
-        dst_directory = os.path.join(OUTPUT_DIR, self.category)
+        src_directory = config.INPUT_DIR
+        if not self.torrent_data_type_is_directory:
+            dst_directory = os.path.join(config.OUTPUT_DIR, self.category, self.title + " " + "(" + self.year + ")")
+        else:
+            dst_directory = os.path.join(config.OUTPUT_DIR, self.category)
 
-
-
-
-        src_full_name = os.path.join(src_directory, self.src_file_name)
-        dst_full_name = os.path.join(dst_directory, self.dst_file_name)
-
+        try:
+            src_full_name = os.path.join(src_directory, self.src_file_name)
+            dst_full_name = os.path.join(dst_directory, self.dst_file_name)
+        except:
+            logging.error("Failed joining: " + self.tracker_url + ", skipping")
+            # logging.error(src_directory)
+            # logging.error(self.src_file_name)
+            return False
         if not os.path.exists(dst_directory):
             logging.debug("Creating " + dst_directory)
-            os.mkdir(dst_directory)
+            os.makedirs(dst_directory)
 
         logging.debug("Linking from " + src_full_name + " to " + dst_full_name)
         if os.path.exists(src_full_name):
             if not os.path.exists(dst_full_name):
                 if os.symlink(src_full_name, dst_full_name):
-                    logging.debug(src_full_name + "->" + dst_full_name)
+                    logging.debug(src_full_name + " -> " + dst_full_name)
         else:
             logging.error(src_full_name + " does not exits.")
 
@@ -361,10 +396,11 @@ class Thorrent(object):
         self.dst_file_name = ''
         self.tracker_name = ''
         self.category = ''
-        self.series = False # Is media a series?
-        self.series_data = {
-            "s01": [01]
-        }
+        self.format = ''
+        self.series = False  # Is media a series?
+        # self.series_data = {
+        #     "s01": [01]
+        # }
         self.series_season_min = None  # First season in torrent
         self.series_season_max = None  # Last season in torrent
         self.series_episode_min = None  # First episode
@@ -374,6 +410,17 @@ class Thorrent(object):
         self.torrent_file_data = self.__get_torrent_file_data(self.torrent_file_name)
 
         # logging.debug(pprint.pformat(self.torrent_file_data, indent=1, width=80, depth=None))
+
+        if 'encoding' in self.torrent_file_data:
+            torrent_file_encoding = self.torrent_file_data['encoding']
+        else:
+            torrent_file_encoding = 'cp1251'
+        # logging.debug("Torrent file encoding: " + torrent_file_encoding)
+
+
+
+
+
 
         ## Get and assign html of the page to parse later
         self.html = self.get_torrent_html(self.torrent_file_data)
@@ -385,10 +432,11 @@ class Thorrent(object):
         self.__load_plugins()
 
         ## Check if data type is directory (vs file)
-        self.torrent_data_type_is_directory = self.torrent_data_type_is_directory(self, self.torrent_file_data)
+        self.torrent_data_type_is_directory = self.torrent_data_type_is_directory()
 
         ## Get original torrent file/directory name
-        self.src_file_name = self.torrent_file_data['info']['name']
+
+        self.src_file_name = self.torrent_file_data['info']['name'].decode(torrent_file_encoding)
 
         ## Get destination file/directory name
         self.dst_file_name = self.get_dst_file_name()
@@ -410,7 +458,7 @@ def main(argv, opt_mode=OPT_MODE, opt_path=OPT_PATH):
 
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -m <mode>'
+            print ('test.py -m <mode>')
             sys.exit()
         elif opt in ("-m", "--mode"):
             opt_mode = arg
@@ -433,16 +481,15 @@ def main(argv, opt_mode=OPT_MODE, opt_path=OPT_PATH):
         if opt_path:
             torrent_dir = opt_path
         else:
-            torrent_dir = TORRENT_DIR
+            torrent_dir = config.TORRENT_DIR
 
         logging.debug("Working in directory mode (processing all .torrent files in " + torrent_dir + ")")
-        for torrent_file_name in os.listdir(TORRENT_DIR):
+        for torrent_file_name in os.listdir(config.TORRENT_DIR):
             if os.path.splitext(torrent_file_name)[1] == ".torrent":
-                torrent_file_name = os.path.join(TORRENT_DIR, torrent_file_name)
+                torrent_file_name = os.path.join(config.TORRENT_DIR, torrent_file_name)
                 logging.debug("")
                 logging.debug("Working on " + torrent_file_name)
                 thorrent = Thorrent(torrent_file_name)
-
                 logging.debug("Title: " + thorrent.title)
 
                 thorrents.append(thorrent)
