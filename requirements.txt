@@ -1,3 +1,4 @@
 bencode
 beautifulsoup4
 importlib
+chardet

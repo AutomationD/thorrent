@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 __author__ = 'dmitry'
@@ -15,16 +16,17 @@ from bs4 import BeautifulSoup
 from urlparse import urlparse
 import config
 import importlib
-
-
-
-
+import chardet
+import unicodedata
+import transmission
 
 DEBUG = True
+NOARGS = False  # Don't use cli argument (for development)
 
 ########### Logging Init: ###########
 if DEBUG:
-    logging.basicConfig(format='%(asctime)s %(message)s', filename='thorrent.log', level=logging.DEBUG, stream=sys.stdout)
+    logging.basicConfig(format='%(asctime)s %(message)s', filename=config.LOG_FILE, level=logging.DEBUG, stream=sys.stdout)
+
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
 
@@ -35,7 +37,7 @@ if DEBUG:
     ch.setFormatter(formatter)
     root.addHandler(ch)
 else:
-    logging.basicConfig(format='%(asctime)s %(message)s', filename='thorrent.log', level=logging.WARNING, stream=sys.stdout)
+    logging.basicConfig(format='%(asctime)s %(message)s', filename=config.LOG_FILE, level=logging.WARNING, stream=sys.stdout)
     root = logging.getLogger()
     root.setLevel(logging.WARNING)
 
@@ -60,10 +62,12 @@ TORRENT_FILE_NAME = "[kinozal.tv]id984957.torrent"
 
 
 
-OPT_MODE = 'directory'
-logging.debug('Default mode: ' + OPT_MODE)
-OPT_PATH = config.INPUT_DIR
-logging.debug('Default path: ' + OPT_PATH)
+
+if NOARGS:
+    OPT_MODE = 'directory'
+    logging.debug('Default mode: ' + OPT_MODE)
+    OPT_PATH = config.INPUT_DIR
+    logging.debug('Default path: ' + OPT_PATH)
 
 
 class Thorrent(object):
@@ -87,7 +91,7 @@ class Thorrent(object):
         torrent_file_path = os.path.join(config.TORRENT_DIR, torrent_file_name)
 
         if not os.path.exists(torrent_file_path):
-            logging.error('Skipped, .torrent is not found: "%s' % torrent_file_path)
+            logging.error('.torrent is not found: "%s' % torrent_file_path)
             return None
         else:
             try:
@@ -141,6 +145,7 @@ class Thorrent(object):
                             22: "Movies",
                             20: "Movies",
 
+                            48: "TV-Shows",
                             49: "TV-Shows",
                             50: "TV-Shows",
                             45: "TV-Shows",
@@ -168,6 +173,7 @@ class Thorrent(object):
                 try:
                     cat = categories['kinozal_tv']['categories'][int(cat_id)]
                 except:
+                    cat = 'Other'
                     logging.error("Can't find category with id " + cat_id)
                 finally:
                     self.category = cat
@@ -188,7 +194,7 @@ class Thorrent(object):
                     param = "Качество: "
                     tp_p1 = tech_param.find(param)
                     if tp_p1 > -1:
-                         self.format = tech_param[tp_p1+len(param):len(tech_param)]
+                        self.format = tech_param[tp_p1+len(param):len(tech_param)]
 
                 ### :Get Video Format
 
@@ -224,7 +230,7 @@ class Thorrent(object):
                         self.series_season_max = 1
 
 
-                    ### :Check if series ###
+                        ### :Check if series ###
 
                 desc = soup.h2.find_all('b')
                 #print (desc)
@@ -239,16 +245,24 @@ class Thorrent(object):
                     if "Год выпуска" in param_name:
                         self.year = param_value
                         # logging.debug(title + " " + original_title + " " + year)
+                    if not self.title:
+                        self.title = self.localized_title
 
-                        # TODO: Add category detection ++ Maybe have a list of categories and map each tracker category to that standard list
+
+
+
             ##### End kinozal.tv ######
             else:
                 logging.error("Tracker "+self.tracker_name+" is not implemented")
                 exit(1)
 
+    def __get_season_and_episode_file_name(episode_file_name):
+        # TODO: transform local 'season, episode, etc' strings to standard S01E01 format
+        return episode_file_name
 
     def __get_torrent_category(self):
         torrent_category = 'other'
+        # will need to have a modular function for multiple trackers
 
         return torrent_category
 
@@ -282,10 +296,21 @@ class Thorrent(object):
     def torrent_html_content_is_valid(soup):
         return soup.body.find('div', attrs={'class': 'mn_wrap'})
 
+    def __get_torrent_codepage(self):
+        if 'encoding' in self.torrent_file_data:  # If encoding is specified in the torrent file
+            torrent_file_encoding = self.torrent_file_data['encoding']
+            logging.debug("Torrent encoding found: " + torrent_file_encoding)
+        else:
+            logging.warn("No encoding information found in the torrent file. Trying to guess encoding.")
+            chardet_guess = chardet.detect(self.src_file_name)
+            torrent_file_encoding = chardet_guess['encoding']
+            logging.debug("Torrent encoding guessed: " + chardet_guess['encoding'] + " with " + str(chardet_guess['confidence']) + " confidence")
+        return torrent_file_encoding
+
+
     @staticmethod
     def get_safe_file_name(self, torrent_file_name):
         # Stripe Out extra rubbish from the file name
-
 
 
         # #remove repeating spaces
@@ -300,11 +325,14 @@ class Thorrent(object):
         # safe_file_name = re.sub(r'\s*[\[\]\s\\/:"\*?"<>\|,]\s*', '.', safe_file_name, 0, re.UNICODE)
         safe_file_name = re.sub(r'[^\(\)\.\'a-zA-ZА-Яа-яЁёё0-9\s_-]', '', safe_file_name, 0, re.UNICODE)
 
-        # Remove duplicate dots
-        safe_file_name = re.sub(r'[\.]+', '.', safe_file_name, 0, re.UNICODE)
+
+        # Remove accents
+        nkfd_form = unicodedata.normalize('NFKD', unicode(safe_file_name))
+        safe_file_name = u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
         # Remove duplicate dots
         safe_file_name = re.sub(r'[\.]+', '.', safe_file_name, 0, re.UNICODE)
+
         #\s*[\[\]\s\\/:"\*?"<>\|,]\s*
         #(\.*$|^\.*)
 
@@ -356,8 +384,8 @@ class Thorrent(object):
 
         if not self.torrent_data_type_is_directory:
             dst_file_name += os.path.splitext(self.src_file_name)[1]
-        #return self.get_safe_file_name(self, dst_file_name)
-        return dst_file_name
+        return self.get_safe_file_name(self, dst_file_name)
+        #return dst_file_name
 
     def make_links(self):
         src_directory = config.INPUT_DIR
@@ -384,7 +412,7 @@ class Thorrent(object):
                 if os.symlink(src_full_name, dst_full_name):
                     logging.debug(src_full_name + " -> " + dst_full_name)
         else:
-            logging.error(src_full_name + " does not exits.")
+            logging.error(src_full_name + " does not exist (download haven't finish yet?).")
 
     def __init__(self, torrent_file_name):
         ## Init empty variables
@@ -410,44 +438,44 @@ class Thorrent(object):
         self.torrent_file_data = self.__get_torrent_file_data(self.torrent_file_name)
 
         # logging.debug(pprint.pformat(self.torrent_file_data, indent=1, width=80, depth=None))
+        if self.torrent_file_data:
+            ## Get and assign html of the page to parse later
+            self.html = self.get_torrent_html(self.torrent_file_data)
 
-        if 'encoding' in self.torrent_file_data:
-            torrent_file_encoding = self.torrent_file_data['encoding']
+            ## Execute parse of html
+            self.__get_torrent_data()
+
+
+
+            # Load Plugins (for example tracker-specific parsing logic)
+            self.__load_plugins()
+
+            ## Check if data type is directory (vs file)
+            self.torrent_data_type_is_directory = self.torrent_data_type_is_directory()
+
+            ## Get original torrent file/directory name
+            self.src_file_name = self.torrent_file_data['info']['name']
+
+            ## Get destination file/directory name
+            self.dst_file_name = self.get_dst_file_name()
+
+
+            ## Decode src_file_name based on the encoding of torrent file
+            ## Get torrent file encoding (torrent_data and src_file_name are involved
+            self.src_file_name = self.src_file_name.decode(self.__get_torrent_codepage())
+
         else:
-            torrent_file_encoding = 'cp1251'
-        # logging.debug("Torrent file encoding: " + torrent_file_encoding)
+            logging.debug("Skipped " + self.torrent_file_name)
 
-
-
-
-
-
-        ## Get and assign html of the page to parse later
-        self.html = self.get_torrent_html(self.torrent_file_data)
-
-        ## Execute parse of html
-        self.__get_torrent_data()
-
-        # Load Plugins (for example tracker-specific parsing logic)
-        self.__load_plugins()
-
-        ## Check if data type is directory (vs file)
-        self.torrent_data_type_is_directory = self.torrent_data_type_is_directory()
-
-        ## Get original torrent file/directory name
-
-        self.src_file_name = self.torrent_file_data['info']['name'].decode(torrent_file_encoding)
-
-        ## Get destination file/directory name
-        self.dst_file_name = self.get_dst_file_name()
-
-
-def main(argv, opt_mode=OPT_MODE, opt_path=OPT_PATH):
+def main(argv):
+    if NOARGS:
+        opt_mode = OPT_MODE
+        opt_path = OPT_PATH
 
 
     ### Command Line Options: ###
     try:
-        opts, args = getopt.getopt(argv, "hmp:", ["mode="])
+        opts, args = getopt.getopt(argv, "hm:p:t:")
         # if not opts:
         #     logging.error('thorrent.py -m <mode>')
         #     sys.exit()
@@ -462,10 +490,13 @@ def main(argv, opt_mode=OPT_MODE, opt_path=OPT_PATH):
             sys.exit()
         elif opt in ("-m", "--mode"):
             opt_mode = arg
-            logging.debug('Mode is ', opt_mode)
+            logging.debug('Mode is ' + opt_mode)
         elif opt in ("-p", "--path"):
             opt_path = arg
-            logging.debug('Path is ', opt_path)
+            # logging.debug('Path is ' + opt_path.encode('utf-8'))
+        elif opt in ("-t", "--torrent_id"):
+            opt_torrent_id = arg
+            # logging.debug('Path is ' + opt_path.encode('utf-8'))
         else:
             logging.error('thorrent.py -m <mode>')
             sys.exit(2)
@@ -499,30 +530,45 @@ def main(argv, opt_mode=OPT_MODE, opt_path=OPT_PATH):
         if opt_path:
             torrent_file_name = opt_path
         else:
-            if DEBUG:  # For debug only - process one single hard coded test .torrent file
+            if NOARGS:  # For debug only - process one single hard coded test .torrent file
+                torrent_file_name = TORRENT_FILE_NAME
+            else:
+                logging.error("Torrent file not specified")
+                sys.exit(2)
+        logging.debug("Working in single file mode (processing " + torrent_file_name.decode('utf-8') + ")")
+        thorrent = Thorrent(torrent_file_name)
+        if thorrent.torrent_file_data:
+            logging.debug("Title: " + thorrent.title)
+            thorrents.append(thorrent)
+
+    # Transmission mode - Processing a single torrent from transmission client
+    elif opt_mode == 'transmission':
+        if opt_torrent_id:
+            logging.debug("torrent_id received: " + opt_torrent_id)
+            torrent_file_name = transmission.get_torrent_file_name(opt_torrent_id)
+            logging.debug("torrent_file_name: " + torrent_file_name)
+        else:
+            if NOARGS:  # For debug only - process one single hard coded test .torrent file
                 torrent_file_name = TORRENT_FILE_NAME
             else:
                 logging.error("Torrent file not specified")
                 sys.exit(2)
         logging.debug("Working in single file mode (processing " + torrent_file_name + ")")
+        thorrent = Thorrent(torrent_file_name)
+        if thorrent.torrent_file_data:
+            logging.debug("Title: " + thorrent.title)
+            thorrents.append(thorrent)
+
     else:
         logging.error('thorrent.py -m <mode>')
     ### :Create Nessesary Thorrent Objects (and put it in a list) ###
 
-    logging.info("\nCreating symlinks in order to continue seeding")
-    for thorrent in thorrents:
-
-        ## Create Links to new structure (and keep seeding old file names as well)
-        thorrent.make_links()
-
-
+    logging.debug("Finished collecting information. Number of thorrents aquired: " + str(len(thorrents)))
+    if len(thorrents) > 0:
+        logging.info("\nCreating symlinks in order to continue seeding")
+        for thorrent in thorrents:
+            ## Create Links to new structure (and keep seeding old file names as well)
+            thorrent.make_links()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-
-
-
-
-
-
