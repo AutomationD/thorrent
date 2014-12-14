@@ -1,31 +1,45 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from thorrent import bencode
+
 __author__ = 'dmitry'
 
 import os
 import re
-import bencode
+
 import urllib
 import logging
 import sys, getopt
-import string
 import pprint
-from plugins import *
+# from plugins import *
 from bs4 import BeautifulSoup
-from urlparse import urlparse
+from urllib.parse import urlparse
 import config
-import importlib
+
 import chardet
 import unicodedata
-import transmission
+import transmissionrpc as transmission
+from kinopoisk.movie import Movie
+import datetime
+
+
+
+movie = Movie(id=521689)
+print(datetime.datetime.now())
+movie.get_content('main_page')
+print(datetime.datetime.now())
+movie.get_content('posters')
+print(movie.posters)
+print(datetime.datetime.now())
+exit()
+
+
 
 DEBUG = True
-NOARGS = False  # Don't use cli argument (for development)
+NOARGS = True  # Don't use cli argument (for development)
 
 ########### Logging Init: ###########
 if DEBUG:
-    logging.basicConfig(format='%(asctime)s %(message)s', filename=config.LOG_FILE, level=logging.DEBUG, stream=sys.stdout)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG, stream=sys.stdout)
 
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
@@ -37,7 +51,7 @@ if DEBUG:
     ch.setFormatter(formatter)
     root.addHandler(ch)
 else:
-    logging.basicConfig(format='%(asctime)s %(message)s', filename=config.LOG_FILE, level=logging.WARNING, stream=sys.stdout)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.WARNING, stream=sys.stdout)
     root = logging.getLogger()
     root.setLevel(logging.WARNING)
 
@@ -77,13 +91,15 @@ class Thorrent(object):
 
         logging.debug("URL: '%s'" % self.tracker_url)
         try:
-            response = urllib.urlopen(self.tracker_url)
+            response = urllib.request.urlopen(self.tracker_url)
             html_page = response.read()
         except:
             logging.error("Error, Can't load tracker page '%s'" % self.tracker_url)
             return None
 
+
         html_page = html_page.decode(self.get_torrent_html_codepage(self, html_page))
+        # html_page = html_page.decode(self.get_torrent_html_codepage(self, html_page))
         return html_page
 
     @staticmethod
@@ -95,13 +111,15 @@ class Thorrent(object):
             return None
         else:
             try:
-                torrent_file_data = bencode.bdecode(open(torrent_file_path, 'rb').read())
+                torrent_file_data = bencode.decode(open(torrent_file_path, 'rb').read())
+                print(torrent_file_data)
                 return torrent_file_data
             except:
                 logging.error("Error, can't extract tracker url from .torrent file %s" % torrent_file_path)
                 return None
 
     def __get_torrent_data(self):
+
         soup = BeautifulSoup(self.html)
         if not self.torrent_html_content_is_valid(soup):
             logging.error("Html content is not valid")
@@ -166,7 +184,7 @@ class Thorrent(object):
                     }
                 }
 
-                cat = soup.find(attrs={'class' : 'cat_img_r'})
+                cat = soup.find(attrs={'class': 'cat_img_r'})
                 cat_id = re.sub(r'[\D]', '', str(cat['onclick']))
 
                 # logging.debug(pprint.pformat(cat, indent=1, width=80, depth=None))
@@ -274,7 +292,7 @@ class Thorrent(object):
         # logging.debug("Dynamically Importing " + plugin_name + " plugin")
 
 
-        # return importlib.import_module('plugins.'+plugin_name,)
+
 
 
 
@@ -327,7 +345,7 @@ class Thorrent(object):
 
 
         # Remove accents
-        nkfd_form = unicodedata.normalize('NFKD', unicode(safe_file_name))
+        nkfd_form = unicodedata.normalize('NFKD', safe_file_name)
         safe_file_name = u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
         # Remove duplicate dots
@@ -454,7 +472,8 @@ class Thorrent(object):
             self.torrent_data_type_is_directory = self.torrent_data_type_is_directory()
 
             ## Get original torrent file/directory name
-            self.src_file_name = self.torrent_file_data['info']['name']
+            # TODO: Check if UTF8 exists first, if not use 'name' field
+            self.src_file_name = self.torrent_file_data['info']['name.utf-8']
 
             ## Get destination file/directory name
             self.dst_file_name = self.get_dst_file_name()
@@ -462,10 +481,11 @@ class Thorrent(object):
 
             ## Decode src_file_name based on the encoding of torrent file
             ## Get torrent file encoding (torrent_data and src_file_name are involved
-            self.src_file_name = self.src_file_name.decode(self.__get_torrent_codepage())
+            self.src_file_name = self.src_file_name
 
         else:
             logging.debug("Skipped " + self.torrent_file_name)
+
 
 def main(argv):
     if NOARGS:
@@ -570,5 +590,3 @@ def main(argv):
             ## Create Links to new structure (and keep seeding old file names as well)
             thorrent.make_links()
 
-if __name__ == "__main__":
-    main(sys.argv[1:])

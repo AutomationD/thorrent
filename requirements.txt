@@ -1,4 +1,6 @@
-bencode
+bencodepy
 beautifulsoup4
-importlib
 chardet
+pluginbase
+transmissionrpc
+# IMDbPY
