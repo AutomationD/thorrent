@@ -9,7 +9,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "an_example_pypi_project",
+    name = "thorrent",
     version = "0.0.1",
     author = "Dmitry Kireev",
     author_email = "dmitry@kireev.co",
@@ -17,11 +17,12 @@ setup(
     license = "MIT",
     keywords = "htpc,torrent",
     url = "",
-    packages=['an_example_pypi_project', 'tests'],
-    long_description=read('README'),
+    packages=['thorrent'],
+    install_requires=['bencodepy','beautifulsoup4','chardet','pluginbase','transmissionrpc'],
+    long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: MIT License",
         ],
     )
