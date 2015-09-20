@@ -111,16 +111,24 @@ class Thorrent(object):
             else:
                 logging.debug("Html content is valid")
 
-                ## Extracting tracker domain name from the url (to get a plugin name later)
+                # Extracting tracker domain name from the url (to get a plugin name later)
                 logging.debug("Extracting tracker domain name from "+self.tracker_url)
                 self.tracker_name = urlparse(self.tracker_url).netloc
                 logging.debug("Tracker Name: " + self.tracker_name)
 
-                # TODO: Separate tracker into a separate plugin
-                ##### Begin kinozal.tv: ######
                 if self.tracker_name == 'kinozal.tv':
+                    # TODO: Separate tracker into a separate plugin
+                    """
+                    ###########################################
+                    ###########################################
+                    ###########################################
+                    ############### kinozal.tv: ###############
+                    ###########################################
+                    ###########################################
+                    ###########################################
+                    """
 
-                    ### Get Category: ###
+                    # Get Category: #
                     categories = {
                         "kinozal_tv": {
                             "categories": {
@@ -185,12 +193,14 @@ class Thorrent(object):
                     finally:
                         self.category = cat
                         logging.debug("Category: " + categories['kinozal_tv']['categories'][int(cat_id)])
-                    ### :Get Category ###
+                    # :Get Category #
 
                     if self.category in audio:
+                        """
                         #########################
                         ######## Audio ##########
                         #########################
+                        """
                         self.type = 'audio'
                         logging.debug("Processing as audio")
                         html_title = soup.title.string
@@ -207,17 +217,17 @@ class Thorrent(object):
                             tp_p1 = tech_param.find(param)
                             if tp_p1 > -1:
                                 self.format = tech_param[tp_p1+len(param):len(tech_param)]
-                        ### :Get Audio Format ###
+                        # :Get Audio Format #
 
-                        ### Get Performer Name: ###
+                        # Get Performer Name: #
                         sba = soup.find_all("a", {"class": "sba"}) # Getting sba class hrefs
                         for s in sba:
                             if "persons" in s['href']:
                                 self.title = s.text
 
-                        ###: Get Performer Name ###
+                        #: Get Performer Name #
 
-                        ### Get other information from description ###
+                        # Get other information from description #
                         desc = soup.h2.find_all('b')
                         for d in desc:
                             param_name = d.text.strip()
@@ -233,24 +243,23 @@ class Thorrent(object):
                                 # logging.debug(title + " " + original_title + " " + year)
                             if not self.title:
                                 self.title = html_title
-                        ### :RGet other information from description ###
+                        # :Get other information from description #
 
-                        ### Check if discography / collection: ###
+                        # Check if discography / collection: #
                         if "discography" in html_title.lower():
                             self.discography = True
-                            ###: Check if discography / collection ###
-
-
-
+                        #: Check if discography / collection #
 
                     if self.category in video:
+                        """
                         #########################
                         ######## Video ##########
                         #########################
+                        """
                         self.type = 'video'
                         logging.debug("Processing as video")
 
-                        ### Get Video Format: ###
+                        # Get Video Format: #
                         tech_params_div = "".join(soup.find(id="tabs").findAll(text=True)).split("\n")
                         # tp_p1 = tech_params_div.find("Качество: ")
                         # self.format = tech_params_div[tp_p1]
@@ -261,12 +270,12 @@ class Thorrent(object):
                             tp_p1 = tech_param.find(param)
                             if tp_p1 > -1:
                                 self.format = tech_param[tp_p1+len(param):len(tech_param)]
-                        ### :Get Video Format
+                        # :Get Video Format #
 
                         html_title = soup.title.string
                         logging.debug("HTML title: " + html_title)
 
-                        ### Check if series: ###
+                        # Check if series: #
                         if ("серия" in html_title) or ("серии" in html_title) or ("выпуски" in html_title) or ("сезон:" in html_title) or ("сезоны:" in html_title): # Series Torrent
                             self.series = True
                             logging.debug("Detected Series")
@@ -285,8 +294,6 @@ class Thorrent(object):
                                     se_s_min = se_s[0:se_s_min_p]
                                     se_s_max = se_s[se_s_min_p+1:len(se_s)]
                                     self.series_season_min = int(se_s_min)
-
-
                                     self.series_season_max = int(se_s_max)
 
                                 logging.debug("First Season: " + str(self.series_season_min))
@@ -294,10 +301,10 @@ class Thorrent(object):
                             else:  # No information about season found
                                 self.series_season_min = 1
                                 self.series_season_max = 1
-                                ### :Check if series ###
+                        # :Check if series #
 
                         desc = soup.h2.find_all('b')
-                        #print (desc)
+                        # print (desc)
 
                         for d in desc:
                             param_name = d.text.strip()
@@ -311,9 +318,7 @@ class Thorrent(object):
                                 # logging.debug(title + " " + original_title + " " + year)
                             if not self.title:
                                 self.title = self.localized_title
-
-
-                ##### End kinozal.tv ######
+                    """############### :kinozal.tv ###############"""
                 else:
                     logging.error("Tracker "+self.tracker_name+" is not implemented")
                     exit(1)
@@ -366,24 +371,19 @@ class Thorrent(object):
             logging.debug("Torrent encoding guessed: " + chardet_guess['encoding'] + " with " + str(chardet_guess['confidence']) + " confidence")
         return torrent_file_encoding
 
-
     @staticmethod
     def get_safe_file_name(self, torrent_file_name):
         # Stripe Out extra rubbish from the file name
 
-
-        # #remove repeating spaces
+        # Remove repeating spaces
         safe_file_name = torrent_file_name
         safe_file_name = re.sub(r'\s*torrent\s*', '', safe_file_name, 0, re.UNICODE)
 
-        #remove special symbols
+        # Remove special symbols
         # download_file_name = re.sub(r'[\\/:"\*?<>|]+', '', download_file_name, 0, re.UNICODE)
-
-
 
         # safe_file_name = re.sub(r'\s*[\[\]\s\\/:"\*?"<>\|,]\s*', '.', safe_file_name, 0, re.UNICODE)
         safe_file_name = re.sub(r'[^\(\)\.\'a-zA-ZА-Яа-яЁёё0-9\s_-]', '', safe_file_name, 0, re.UNICODE)
-
 
         # Remove accents
         nkfd_form = unicodedata.normalize('NFKD', safe_file_name)
@@ -441,12 +441,9 @@ class Thorrent(object):
             if self.format:
                 dst_file_name += " - " + self.format
 
-
-
-            ## If we are processing source as a file target should also have an extension, otherwise not
+            # If we are processing source as a file target should also have an extension, otherwise not
             if not self.torrent_data_type_is_directory:
                 dst_file_name += os.path.splitext(self.src_file_name)[1]
-
 
         if self.type == 'audio':
             if self.discography:
@@ -455,7 +452,6 @@ class Thorrent(object):
                 dst_file_name = self.album
 
         return self.get_safe_file_name(self, dst_file_name)
-
 
     def make_links(self, src_directory, dst_directory):
         # Constructing tartet directory path for videos
@@ -481,7 +477,6 @@ class Thorrent(object):
             # logging.error(src_directory)
             # logging.error(self.src_file_name)
             return False
-
 
         if not os.path.exists(dst_directory):
             logging.debug("Creating " + dst_directory)
@@ -512,7 +507,6 @@ class Thorrent(object):
         self.kinopoisk_id = ''
         self.type = '' # video, audio, soft, game
 
-
         self.series = False  # Is media a series?
         # self.series_data = {
         #     "s01": [01]
@@ -528,33 +522,29 @@ class Thorrent(object):
 
         # logging.debug(pprint.pformat(self.torrent_file_data, indent=1, width=80, depth=None))
         if self.torrent_file_data:
-            ## Get and assign html of the page to parse later
+            # Get and assign html of the page to parse later
             self.html = self.get_torrent_html(self.torrent_file_data)
 
-            ## Execute parse of html
+            # Execute parse of html
             self.__get_torrent_data()
-
-
 
             # Load Plugins (for example tracker-specific parsing logic)
             self.__load_plugins()
 
-            ## Check if data type is directory (vs file)
+            # Check if data type is directory (vs file)
             self.torrent_data_type_is_directory = self.torrent_data_type_is_directory()
 
-
-            ## Get original torrent file/directory name
+            # Get original torrent file/directory name
             if 'name.utf-8' in self.torrent_file_data['info']:
                 self.src_file_name = self.torrent_file_data['info']['name.utf-8']
             else:
                 self.src_file_name = self.torrent_file_data['info']['name']
 
-            ## Get destination file/directory name
+            # Get destination file/directory name
             self.dst_file_name = self.get_dst_file_name()
 
-
-            ## Decode src_file_name based on the encoding of torrent file
-            ## Get torrent file encoding (torrent_data and src_file_name are involved
+            # Decode src_file_name based on the encoding of torrent file.
+            # Get torrent file encoding (torrent_data and src_file_name are involved
             self.src_file_name = self.src_file_name
 
         else:

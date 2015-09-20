@@ -34,10 +34,6 @@ import datetime
 
 
 
-
-
-
-
 def main(argv):
     if NOARGS:
         opt_mode = OPT_MODE
