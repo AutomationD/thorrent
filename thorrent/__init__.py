@@ -77,7 +77,6 @@ class Thorrent(object):
         else:
             logging.info('Access successful.')
 
-
         html_page = html_page.decode(self.get_torrent_html_codepage(self, html_page))
 
 
@@ -450,6 +449,9 @@ class Thorrent(object):
                 dst_file_name = 'Discography'
             else:
                 dst_file_name = self.album
+
+        else:
+            dst_file_name = self.title
 
         return self.get_safe_file_name(self, dst_file_name)
 
