@@ -104,11 +104,11 @@ class Thorrent(object):
             response = urllib.request.urlopen(self.tracker_url)
             html_page = response.read()
         except (urllib.error.HTTPError, urllib.error.URLError) as error:            
-            logging.error('Data of %s not retrieved because %s\nURL: %s', urllib.name, error, urllib.url)
+            logging.info('Data of %s not retrieved because %s\nURL: %s', urllib.name, error, urllib.url)
             self.errors.append('Data of %s not retrieved because %s\nURL: %s', urllib.name, error, urllib.url)
             return None
         except timeout:
-            logging.error('Socket timed out - URL %s', urllib.url)
+            logging.info('Socket timed out - URL %s', urllib.url)
             self.errors.append('Socket timed out - URL %s', urllib.url)
             return None
 
@@ -594,6 +594,9 @@ class Thorrent(object):
         if self.torrent_file_data:
             ## Get and assign html of the page to parse later
             self.html = self.get_torrent_html(self.torrent_file_data)
+            if not self.html:
+                logging.debug("Error in getting html for " + self.torrent_file_name)
+
 
             ## Execute parse of html
             if self.__get_torrent_data():
