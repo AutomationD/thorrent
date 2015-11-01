@@ -500,8 +500,6 @@ class Thorrent(object):
             if self.format:
                 dst_file_name += " - " + self.format
 
-
-
             ## If we are processing source as a file target should also have an extension, otherwise not
             if not self.torrent_data_type_is_directory:
                 dst_file_name += os.path.splitext(self.src_file_name)[1]
@@ -512,6 +510,10 @@ class Thorrent(object):
                 dst_file_name = 'Discography'
             else:
                 dst_file_name = self.album
+
+        # If not a specific media type
+        else:
+            dst_file_name = self.title
 
         return self.get_safe_file_name(self, dst_file_name)
 
