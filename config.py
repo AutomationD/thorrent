@@ -10,10 +10,10 @@ DEBUG = True
 NOARGS = True  # Don't use cli argument (for development)
 
 
-INPUT_DIR = os.path.join(APPDIR, 'thorrent/test/samples/src')
-OUTPUT_DIR = os.path.join(APPDIR, 'thorrent/test/samples/out')
-TORRENT_DIR = os.path.join(APPDIR, 'thorrent/test/samples/torrents')
-
+INPUT_DIR = os.path.join(APPDIR, '/data/downloads')
+OUTPUT_DIR = os.path.join(APPDIR, '/data/media')
+TORRENT_DIR = os.path.join(APPDIR, '/data/to-download')
+TORRENT_DOWNLOADED_DIR = os.path.join(APPDIR, '/var/lib/transmission/torrents')
 
 #TEST_TORRENT_FILE = "[kinozal.tv]id632728.torrent" # Multiple Files
 # TORRENT_FILE_NAME = "[kinozal.tv]id984957.torrent"
