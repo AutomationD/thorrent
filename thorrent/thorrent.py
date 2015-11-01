@@ -102,20 +102,20 @@ class Thorrent(object):
         logging.debug("URL: '%s'" % self.tracker_url)
         try:
             response = urllib.request.urlopen(self.tracker_url)
-            html_page = response.read()
-        except (urllib.error.HTTPError, urllib.error.URLError) as error:            
-            logging.info('Data of %s not retrieved because %s\nURL: %s', urllib.name, error, urllib.url)
-            self.errors.append('Data of %s not retrieved because %s\nURL: %s', urllib.name, error, urllib.url)
+        except (urllib.error.HTTPError, urllib.error.URLError) as error:
+            logging.info('Data of %s not retrieved.' % self.tracker_url)
+            self.errors.append('Data of %s not retrieved.' % self.tracker_url)
             return None
         except timeout:
-            logging.info('Socket timed out - URL %s', urllib.url)
-            self.errors.append('Socket timed out - URL %s', urllib.url)
+            logging.info('Socket timed out - URL %s' % self.tracker_url)
+            self.errors.append('Socket timed out - URL %s' % self.tracker_url)
             return None
 
         # except:
         #     logging.error("Error, Can't load tracker page '%s'" % self.tracker_url)
         #     return None
         else:
+            html_page = response.read()
             logging.info('Successful data retreival from ' + self.tracker_url)
 
 

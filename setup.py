@@ -9,16 +9,16 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "thorrent",
-    version = "0.0.1",
-    author = "Dmitry Kireev",
-    author_email = "dmitry@kireev.co",
-    description = ("-"),
-    license = "MIT",
-    keywords = "htpc,torrent",
-    url = "",
+    name="thorrent",
+    version="0.0.1",
+    author="Dmitry Kireev",
+    author_email="dmitry@kireev.co",
+    description=("-"),
+    license="MIT",
+    keywords="htpc,torrent",
+    url="",
     packages=['thorrent'],
-    install_requires=['bencodepy','beautifulsoup4','chardet','pluginbase','transmissionrpc'],
+    install_requires=['bencodepy', 'beautifulsoup4', 'chardet', 'pluginbase', 'transmissionrpc'],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
